@@ -1,0 +1,962 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Meeting</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    /* ── Design tokens ─────────────────────────────────────────── */
+    :root {
+      --bg-base:      #0d0d12;
+      --bg-surface:   #13131c;
+      --bg-elevated:  #1a1a27;
+      --bg-hover:     #222233;
+      --border:       #2a2a3e;
+      --border-soft:  #1f1f30;
+
+      --accent:       #6366f1;
+      --accent-hover: #4f46e5;
+      --accent-dim:   rgba(99,102,241,0.15);
+
+      --text-primary:   #e8e8f0;
+      --text-secondary: #8b8ba7;
+      --text-muted:     #55556a;
+
+      --danger:       #ef4444;
+      --danger-hover: #dc2626;
+      --warn:         #f59e0b;
+      --warn-text:    #0d0d12;
+      --green:        #22c55e;
+    }
+
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      background: var(--bg-base);
+      color: var(--text-primary);
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ── Buttons ───────────────────────────────────────────────── */
+    button {
+      cursor: pointer;
+      padding: 8px 18px;
+      border: 1px solid transparent;
+      border-radius: 6px;
+      font-size: 13.5px;
+      font-weight: 500;
+      letter-spacing: 0.01em;
+      transition: background 0.15s, border-color 0.15s, box-shadow 0.15s;
+      background: var(--accent);
+      color: #fff;
+    }
+    button:hover { background: var(--accent-hover); box-shadow: 0 0 0 3px var(--accent-dim); }
+    button.danger       { background: var(--danger); }
+    button.danger:hover { background: var(--danger-hover); box-shadow: 0 0 0 3px rgba(239,68,68,0.18); }
+    button.secondary    { background: var(--bg-elevated); border-color: var(--border); color: var(--text-secondary); }
+    button.secondary:hover { background: var(--bg-hover); color: var(--text-primary); border-color: #3d3d56; box-shadow: none; }
+    button.muted        { background: var(--warn); color: var(--warn-text); }
+    button.muted:hover  { background: #d97706; box-shadow: 0 0 0 3px rgba(245,158,11,0.2); }
+    button:disabled     { opacity: 0.4; cursor: default; box-shadow: none; }
+
+    /* ── Inputs ────────────────────────────────────────────────── */
+    input {
+      padding: 9px 12px;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      background: var(--bg-elevated);
+      color: var(--text-primary);
+      font-size: 14px;
+      width: 100%;
+      transition: border-color 0.15s, box-shadow 0.15s;
+      outline: none;
+    }
+    input::placeholder { color: var(--text-muted); }
+    input:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px var(--accent-dim);
+    }
+    label {
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--text-secondary);
+      display: block;
+      margin-bottom: 5px;
+      letter-spacing: 0.03em;
+      text-transform: uppercase;
+    }
+    .field { margin-bottom: 14px; }
+    .hidden { display: none !important; }
+
+    /* ── Auth screen ───────────────────────────────────────────── */
+    #auth-screen {
+      max-width: 360px;
+      margin: auto;
+      padding: 36px 32px;
+      background: var(--bg-surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      box-shadow: 0 24px 64px rgba(0,0,0,0.6);
+    }
+    #auth-screen h2 {
+      margin-bottom: 6px;
+      font-size: 20px;
+      font-weight: 700;
+      color: var(--text-primary);
+      letter-spacing: -0.02em;
+    }
+    #auth-screen .subtitle {
+      font-size: 13px;
+      color: var(--text-muted);
+      margin-bottom: 24px;
+    }
+    #auth-screen .tabs {
+      display: flex;
+      gap: 0;
+      margin-bottom: 24px;
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+      border-radius: 7px;
+      padding: 3px;
+    }
+    #auth-screen .tabs button {
+      flex: 1;
+      background: transparent;
+      border: none;
+      color: var(--text-secondary);
+      border-radius: 5px;
+      padding: 7px 12px;
+    }
+    #auth-screen .tabs button:hover { background: var(--bg-hover); box-shadow: none; color: var(--text-primary); }
+    #auth-screen .tabs button.active {
+      background: var(--accent);
+      color: #fff;
+      box-shadow: 0 2px 8px rgba(99,102,241,0.35);
+    }
+    #auth-error {
+      color: #f87171;
+      font-size: 12.5px;
+      margin-top: 10px;
+      min-height: 18px;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    /* ── Lobby screen ──────────────────────────────────────────── */
+    #lobby-screen {
+      max-width: 480px;
+      margin: auto;
+      padding: 36px 32px;
+      background: var(--bg-surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      box-shadow: 0 24px 64px rgba(0,0,0,0.6);
+    }
+    #lobby-screen h2 {
+      font-size: 20px;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+    }
+    .lobby-section {
+      margin-bottom: 24px;
+      padding-bottom: 24px;
+      border-bottom: 1px solid var(--border-soft);
+    }
+    .lobby-section:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
+    .lobby-section h3 {
+      margin-bottom: 14px;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+    #lobby-error { color: #f87171; font-size: 12.5px; margin-top: 10px; }
+    #user-info {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 24px;
+      padding-bottom: 20px;
+      border-bottom: 1px solid var(--border-soft);
+    }
+    #lobby-username {
+      font-size: 13px;
+      color: var(--text-secondary);
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+      padding: 4px 10px;
+      border-radius: 20px;
+    }
+
+    /* ── Meeting room ──────────────────────────────────────────── */
+    #meeting-screen { display: flex; flex-direction: column; height: 100vh; }
+
+    #meeting-header {
+      padding: 11px 18px;
+      background: var(--bg-surface);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-shrink: 0;
+    }
+    #meeting-title {
+      font-weight: 600;
+      font-size: 15px;
+      color: var(--text-primary);
+    }
+    #meeting-id-display {
+      font-size: 11px;
+      color: var(--text-muted);
+      font-family: 'Menlo', 'Consolas', monospace;
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+      padding: 2px 8px;
+      border-radius: 4px;
+    }
+    #copy-id-btn {
+      font-size: 11px;
+      padding: 4px 10px;
+      background: var(--bg-elevated);
+      border-color: var(--border);
+      color: var(--text-secondary);
+    }
+    #copy-id-btn:hover { color: var(--text-primary); background: var(--bg-hover); box-shadow: none; }
+    #participant-count {
+      font-size: 12.5px;
+      color: var(--text-secondary);
+      margin-left: auto;
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+      padding: 3px 10px;
+      border-radius: 20px;
+    }
+    #meeting-status {
+      font-size: 11.5px;
+      color: var(--text-muted);
+      padding: 4px 18px;
+      background: var(--bg-base);
+      border-bottom: 1px solid var(--border-soft);
+      flex-shrink: 0;
+      font-family: 'Menlo', 'Consolas', monospace;
+    }
+
+    /* ── Video grid ────────────────────────────────────────────── */
+    #room-body { display: flex; flex: 1; overflow: hidden; }
+
+    #video-grid {
+      flex: 1;
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      gap: 8px;
+      padding: 10px;
+      background: var(--bg-base);
+      overflow-y: auto;
+      align-content: start;
+    }
+
+    .video-tile {
+      position: relative;
+      background: var(--bg-surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      overflow: hidden;
+      aspect-ratio: 16/9;
+      transition: border-color 0.2s;
+    }
+    .video-tile:hover { border-color: #3d3d56; }
+    .video-tile video {
+      width: 100%; height: 100%; object-fit: cover; display: block;
+      background: #000;
+    }
+    .video-tile .name-tag {
+      position: absolute;
+      bottom: 8px;
+      left: 10px;
+      background: rgba(13,13,18,0.82);
+      color: var(--text-primary);
+      font-size: 11.5px;
+      font-weight: 500;
+      padding: 3px 9px;
+      border-radius: 5px;
+      backdrop-filter: blur(4px);
+      border: 1px solid rgba(255,255,255,0.06);
+    }
+    .video-tile .avatar {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      background: var(--bg-surface);
+    }
+    .video-tile .avatar-icon {
+      width: 56px;
+      height: 56px;
+      border-radius: 50%;
+      background: var(--bg-elevated);
+      border: 2px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 24px;
+    }
+    .video-tile .avatar span { font-size: 13px; color: var(--text-muted); }
+    .video-tile.has-video .avatar { display: none; }
+
+    /* ── Controls bar ──────────────────────────────────────────── */
+    #controls {
+      padding: 12px 18px;
+      background: var(--bg-surface);
+      border-top: 1px solid var(--border);
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      flex-shrink: 0;
+    }
+
+    /* ── Chat panel ────────────────────────────────────────────── */
+    #chat-panel {
+      width: 272px;
+      display: flex;
+      flex-direction: column;
+      background: var(--bg-surface);
+      border-left: 1px solid var(--border);
+    }
+    #chat-header {
+      padding: 12px 14px;
+      border-bottom: 1px solid var(--border);
+      font-size: 12.5px;
+      font-weight: 600;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+    #chat-messages {
+      flex: 1;
+      overflow-y: auto;
+      padding: 10px 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      scrollbar-width: thin;
+      scrollbar-color: var(--border) transparent;
+    }
+    #chat-messages::-webkit-scrollbar { width: 4px; }
+    #chat-messages::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+    .chat-msg { font-size: 13px; line-height: 1.5; }
+    .chat-msg .sender { font-weight: 600; color: #818cf8; }
+    .chat-msg.system {
+      color: var(--text-muted);
+      font-style: italic;
+      font-size: 11.5px;
+      text-align: center;
+      padding: 2px 0;
+    }
+    #chat-input-row {
+      display: flex;
+      gap: 6px;
+      padding: 10px;
+      border-top: 1px solid var(--border);
+    }
+    #chat-input-row input { flex: 1; font-size: 13px; padding: 7px 10px; }
+    #chat-input-row button { padding: 7px 12px; flex-shrink: 0; }
+  </style>
+</head>
+<body>
+
+<!-- AUTH -->
+<div id="auth-screen">
+  <h2>Meeting Platform</h2>
+  <p class="subtitle">Secure browser-based video calls</p>
+  <div class="tabs">
+    <button class="active" onclick="showTab('login')">Sign In</button>
+    <button onclick="showTab('register')">Register</button>
+  </div>
+  <div id="tab-login">
+    <div class="field"><label>Username</label><input id="login-username" type="text" autocomplete="username" /></div>
+    <div class="field"><label>Password</label><input id="login-password" type="password" autocomplete="current-password" /></div>
+    <button onclick="doLogin()" style="width:100%">Sign In</button>
+  </div>
+  <div id="tab-register" class="hidden">
+    <div class="field"><label>Username</label><input id="reg-username" type="text" autocomplete="username" /></div>
+    <div class="field"><label>Email (optional)</label><input id="reg-email" type="email" /></div>
+    <div class="field"><label>Password (min 8 chars)</label><input id="reg-password" type="password" autocomplete="new-password" /></div>
+    <button onclick="doRegister()" style="width:100%">Create Account</button>
+  </div>
+  <div id="auth-error"></div>
+</div>
+
+<!-- LOBBY -->
+<div id="lobby-screen" class="hidden">
+  <div id="user-info">
+    <h2>Lobby</h2>
+    <span id="lobby-username" style="font-size:13px;color:#9ca3af"></span>
+    <button class="secondary" onclick="doLogout()" style="margin-left:12px">Sign Out</button>
+  </div>
+  <div class="lobby-section">
+    <h3>Start a new meeting</h3>
+    <div class="field"><label>Title</label><input id="new-meeting-title" type="text" placeholder="Team Standup" /></div>
+    <button onclick="createMeeting()">Create &amp; Join</button>
+  </div>
+  <div class="lobby-section">
+    <h3>Join an existing meeting</h3>
+    <div class="field"><label>Meeting ID</label><input id="join-meeting-id" type="text" placeholder="paste UUID here" /></div>
+    <button onclick="joinMeetingFromLobby()">Join Meeting</button>
+  </div>
+  <div id="lobby-error" style="color:#f87171;font-size:13px;margin-top:8px"></div>
+</div>
+
+<!-- MEETING ROOM -->
+<div id="meeting-screen" class="hidden">
+  <div id="meeting-header">
+    <span id="meeting-title"></span>
+    <span id="meeting-id-display"></span>
+    <button id="copy-id-btn" onclick="copyMeetingId()">Copy ID</button>
+    <span id="participant-count">1 participant</span>
+  </div>
+  <div id="meeting-status">Starting…</div>
+  <div id="room-body">
+    <div id="video-grid"></div>
+    <div id="chat-panel">
+      <div id="chat-header">Chat</div>
+      <div id="chat-messages"></div>
+      <div id="chat-input-row">
+        <input id="chat-input" type="text" placeholder="Message…" maxlength="500"
+               onkeydown="if(event.key==='Enter')sendChat()" />
+        <button onclick="sendChat()">Send</button>
+      </div>
+    </div>
+  </div>
+  <div id="controls">
+    <button id="btn-cam"  onclick="toggleCamera()">Cam Off</button>
+    <button id="btn-mic"  onclick="toggleMic()">Mute</button>
+    <button id="btn-hand" class="secondary" onclick="toggleHand()">Raise Hand</button>
+    <button class="danger" onclick="leaveMeeting()" style="margin-left:auto">Leave</button>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════════════
+//  CONFIG
+// ═══════════════════════════════════════════════════════════════
+const API_BASE = "http://127.0.0.1:8000/api";
+const WS_BASE  = "ws://127.0.0.1:8000";
+
+// Public STUN servers — needed for non-localhost connections.
+// On localhost ICE will find a host candidate directly.
+const ICE_SERVERS = [
+  { urls: "stun:stun.l.google.com:19302" },
+  { urls: "stun:stun1.l.google.com:19302" },
+];
+
+// ═══════════════════════════════════════════════════════════════
+//  STATE
+// ═══════════════════════════════════════════════════════════════
+const state = {
+  access: null, refresh: null, user: null,
+  meetingId: null,
+  presenceWs: null,
+  camEnabled: true,
+  micEnabled: true,
+  handRaised: false,
+};
+
+let localStream = null;
+// connections[userId] = RTCPeerConnection
+const connections = {};
+
+// ═══════════════════════════════════════════════════════════════
+//  UTILITIES
+// ═══════════════════════════════════════════════════════════════
+async function apiFetch(path, options = {}) {
+  const headers = { "Content-Type": "application/json", ...(options.headers || {}) };
+  if (state.access) headers["Authorization"] = `Bearer ${state.access}`;
+  const res = await fetch(`${API_BASE}${path}`, { ...options, headers });
+  const body = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(body.error || `HTTP ${res.status}`);
+  return body;
+}
+
+function showScreen(id) {
+  ["auth-screen","lobby-screen","meeting-screen"].forEach(s =>
+    document.getElementById(s).classList.toggle("hidden", s !== id));
+}
+
+function setStatus(msg) {
+  document.getElementById("meeting-status").textContent = msg;
+}
+
+function escHtml(s) {
+  return String(s)
+    .replace(/&/g,"&amp;").replace(/</g,"&lt;")
+    .replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  AUTH
+// ═══════════════════════════════════════════════════════════════
+function showTab(tab) {
+  document.getElementById("tab-login").classList.toggle("hidden", tab !== "login");
+  document.getElementById("tab-register").classList.toggle("hidden", tab !== "register");
+  document.querySelectorAll("#auth-screen .tabs button").forEach((b, i) => {
+    b.classList.toggle("active", (i===0 && tab==="login") || (i===1 && tab==="register"));
+  });
+}
+
+async function doLogin() {
+  try {
+    const data = await apiFetch("/auth/login/", {
+      method: "POST",
+      body: JSON.stringify({
+        username: document.getElementById("login-username").value.trim(),
+        password: document.getElementById("login-password").value,
+      }),
+    });
+    onAuthSuccess(data);
+  } catch(e) { document.getElementById("auth-error").textContent = e.message; }
+}
+
+async function doRegister() {
+  try {
+    const data = await apiFetch("/auth/register/", {
+      method: "POST",
+      body: JSON.stringify({
+        username: document.getElementById("reg-username").value.trim(),
+        email:    document.getElementById("reg-email").value.trim(),
+        password: document.getElementById("reg-password").value,
+      }),
+    });
+    onAuthSuccess(data);
+  } catch(e) { document.getElementById("auth-error").textContent = e.message; }
+}
+
+function onAuthSuccess(data) {
+  state.access  = data.access;
+  state.refresh = data.refresh;
+  state.user    = data.user;
+  document.getElementById("auth-error").textContent = "";
+  document.getElementById("lobby-username").textContent = `Signed in as ${state.user.username}`;
+  showScreen("lobby-screen");
+}
+
+function doLogout() {
+  state.access = state.refresh = state.user = null;
+  showScreen("auth-screen");
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  LOBBY
+// ═══════════════════════════════════════════════════════════════
+async function createMeeting() {
+  const title = document.getElementById("new-meeting-title").value.trim() || "My Meeting";
+  try {
+    const m = await apiFetch("/meetings/", { method:"POST", body:JSON.stringify({title}) });
+    await enterMeeting(m.id, m.title);
+  } catch(e) { document.getElementById("lobby-error").textContent = e.message; }
+}
+
+async function joinMeetingFromLobby() {
+  const id = document.getElementById("join-meeting-id").value.trim();
+  if (!id) { document.getElementById("lobby-error").textContent = "Enter a meeting ID"; return; }
+  try {
+    await enterMeeting(id);
+  } catch(e) { document.getElementById("lobby-error").textContent = e.message; }
+}
+
+function copyMeetingId() {
+  navigator.clipboard.writeText(state.meetingId).then(() => {
+    const btn = document.getElementById("copy-id-btn");
+    btn.textContent = "Copied!";
+    setTimeout(() => btn.textContent = "Copy ID", 1500);
+  });
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  MEETING ENTRY
+// ═══════════════════════════════════════════════════════════════
+async function enterMeeting(meetingId, title) {
+  // 1. REST join — creates the Participant row in DB
+  const joinData = await apiFetch(`/meetings/${meetingId}/join/`, { method:"POST" });
+  state.meetingId = meetingId;
+
+  document.getElementById("meeting-title").textContent = joinData.title || title || "Meeting";
+  document.getElementById("meeting-id-display").textContent = meetingId;
+  showScreen("meeting-screen");
+  setStatus("Accessing camera and microphone…");
+
+  // 2. Get local media (camera + mic)
+  try {
+    localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+  } catch(e) {
+    console.warn("Camera failed, trying audio-only:", e);
+    try {
+      localStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    } catch(e2) {
+      console.warn("Audio also failed:", e2);
+      localStream = null;
+    }
+  }
+
+  // 3. Show own tile
+  addLocalTile();
+
+  setStatus("Connecting to meeting room…");
+
+  // 4. Open Django Channels WebSocket — this triggers room_state + WebRTC negotiation
+  connectPresenceWS(meetingId);
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  LOCAL MEDIA TILE
+// ═══════════════════════════════════════════════════════════════
+function addLocalTile() {
+  const grid = document.getElementById("video-grid");
+  let tile = document.getElementById("tile-local");
+  if (!tile) {
+    tile = makeTile("local", `${state.user.username} (you)`);
+    grid.appendChild(tile);
+  }
+  const video = tile.querySelector("video");
+  if (localStream) {
+    video.srcObject = localStream;
+    video.muted = true;          // never play back own audio
+    video.autoplay = true;
+    video.playsInline = true;
+    const hasVideo = localStream.getVideoTracks().length > 0;
+    tile.classList.toggle("has-video", hasVideo);
+  }
+  updateParticipantCount();
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  DJANGO CHANNELS — presence + signaling relay
+// ═══════════════════════════════════════════════════════════════
+function connectPresenceWS(meetingId) {
+  const ws = new WebSocket(`${WS_BASE}/ws/meeting/${meetingId}/?token=${state.access}`);
+  state.presenceWs = ws;
+
+  ws.onopen = () => setStatus("Connected — waiting for others…");
+
+  ws.onmessage = async (evt) => {
+    const msg = JSON.parse(evt.data);
+
+    switch (msg.type) {
+
+      case "room_state":
+        // Server sends this to us immediately on connect.
+        // Contains list of people already in the room.
+        if (msg.participants.length === 0) {
+          setStatus("You are the first one here. Share the Meeting ID to invite others.");
+        } else {
+          setStatus(`${msg.participants.length} person(s) already in room. Connecting…`);
+        }
+        // If I have a higher user_id than an existing participant, I create the offer.
+        for (const p of msg.participants) {
+          if (state.user.id > p.user_id) {
+            await initiateOffer(p.user_id, p.username);
+          }
+        }
+        break;
+
+      case "participant_joined":
+        if (msg.user_id === state.user.id) break; // ignore own echo
+        addChatSystem(`${msg.username} joined`);
+        updateParticipantCount();
+        // If I have a higher user_id than the new joiner, I create the offer.
+        // This ensures exactly one side initiates and avoids signaling glare.
+        if (state.user.id > msg.user_id) {
+          await initiateOffer(msg.user_id, msg.username);
+        }
+        break;
+
+      case "participant_left":
+        addChatSystem(`${msg.username} left`);
+        closePeer(msg.user_id);
+        removeTile(`remote-${msg.user_id}`);
+        updateParticipantCount();
+        break;
+
+      case "webrtc_signal":
+        await handleSignal(msg.from, msg.from_username, msg.signal);
+        break;
+
+      case "chat":
+        addChatMessage(msg.username, msg.message);
+        break;
+
+      case "hand_raise":
+        addChatSystem(msg.raised
+          ? `${msg.username} raised their hand`
+          : `${msg.username} lowered their hand`);
+        break;
+
+      case "meeting_ended":
+        addChatSystem("Meeting ended by host");
+        await leaveMeeting();
+        break;
+
+      case "error":
+        setStatus(`Server error: ${msg.message}`);
+        break;
+    }
+  };
+
+  ws.onerror = () => setStatus("WebSocket error — check console");
+  ws.onclose = (e) => {
+    if (e.code === 4001) setStatus("Disconnected: not authenticated");
+    else if (e.code === 4003) setStatus("Disconnected: not in meeting");
+    else setStatus("Disconnected");
+  };
+}
+
+function sendWS(data) {
+  if (state.presenceWs && state.presenceWs.readyState === WebSocket.OPEN) {
+    state.presenceWs.send(JSON.stringify(data));
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  WEBRTC — P2P signaling
+// ═══════════════════════════════════════════════════════════════
+
+function makePeerConnection(remoteUserId, remoteUsername) {
+  const pc = new RTCPeerConnection({ iceServers: ICE_SERVERS });
+  connections[remoteUserId] = pc;
+
+  // Add local tracks to this peer connection
+  if (localStream) {
+    localStream.getTracks().forEach(track => pc.addTrack(track, localStream));
+  }
+
+  // When remote sends media, attach it to a tile
+  pc.ontrack = (evt) => {
+    const stream = evt.streams[0];
+    addRemoteTile(remoteUserId, remoteUsername, stream);
+    setStatus(`Connected with ${remoteUsername}`);
+  };
+
+  // ICE candidates discovered → send to peer via Django Channels WS
+  pc.onicecandidate = (evt) => {
+    if (evt.candidate) {
+      sendWS({
+        type: "webrtc_signal",
+        to: remoteUserId,
+        signal: { type: "ice", candidate: evt.candidate.toJSON() },
+      });
+    }
+  };
+
+  pc.onconnectionstatechange = () => {
+    const s = pc.connectionState;
+    if (s === "connected")     setStatus(`Connected with ${remoteUsername}`);
+    if (s === "disconnected")  setStatus(`${remoteUsername} disconnected`);
+    if (s === "failed")        setStatus(`Connection to ${remoteUsername} failed — try rejoining`);
+  };
+
+  return pc;
+}
+
+// Create an offer and send it to the remote peer
+async function initiateOffer(remoteUserId, remoteUsername) {
+  if (connections[remoteUserId]) return; // already in progress
+  console.log(`[WebRTC] Creating offer → ${remoteUsername} (${remoteUserId})`);
+
+  const pc = makePeerConnection(remoteUserId, remoteUsername);
+  const offer = await pc.createOffer();
+  await pc.setLocalDescription(offer);
+
+  sendWS({
+    type: "webrtc_signal",
+    to: remoteUserId,
+    signal: { type: "offer", sdp: { type: offer.type, sdp: offer.sdp } },
+  });
+}
+
+// Handle incoming signal (offer / answer / ICE)
+async function handleSignal(fromUserId, fromUsername, signal) {
+  if (!signal) return;
+
+  if (signal.type === "offer") {
+    if (connections[fromUserId]) return; // discard duplicate offers
+    console.log(`[WebRTC] Received offer from ${fromUsername}`);
+
+    const pc = makePeerConnection(fromUserId, fromUsername);
+    await pc.setRemoteDescription(new RTCSessionDescription(signal.sdp));
+    const answer = await pc.createAnswer();
+    await pc.setLocalDescription(answer);
+
+    sendWS({
+      type: "webrtc_signal",
+      to: fromUserId,
+      signal: { type: "answer", sdp: { type: answer.type, sdp: answer.sdp } },
+    });
+
+  } else if (signal.type === "answer") {
+    const pc = connections[fromUserId];
+    if (pc) {
+      console.log(`[WebRTC] Received answer from ${fromUsername}`);
+      await pc.setRemoteDescription(new RTCSessionDescription(signal.sdp));
+    }
+
+  } else if (signal.type === "ice") {
+    const pc = connections[fromUserId];
+    if (pc && signal.candidate) {
+      try {
+        await pc.addIceCandidate(new RTCIceCandidate(signal.candidate));
+      } catch(e) {
+        console.warn("[WebRTC] ICE candidate error:", e);
+      }
+    }
+  }
+}
+
+function closePeer(userId) {
+  const pc = connections[userId];
+  if (pc) { pc.close(); delete connections[userId]; }
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  VIDEO TILES
+// ═══════════════════════════════════════════════════════════════
+function makeTile(id, displayName) {
+  const tile = document.createElement("div");
+  tile.className = "video-tile";
+  tile.id = `tile-${id}`;
+  tile.innerHTML = `
+    <video autoplay playsinline></video>
+    <div class="avatar">
+      <div class="avatar-icon">&#127909;</div>
+      <span>${escHtml(displayName)}</span>
+    </div>
+    <div class="name-tag">${escHtml(displayName)}</div>
+  `;
+  return tile;
+}
+
+function addRemoteTile(userId, username, stream) {
+  const grid = document.getElementById("video-grid");
+  const tileId = `remote-${userId}`;
+  let tile = document.getElementById(`tile-${tileId}`);
+  if (!tile) {
+    tile = makeTile(tileId, username);
+    grid.appendChild(tile);
+  }
+  const video = tile.querySelector("video");
+  video.srcObject = stream;
+  video.autoplay = true;
+  video.playsInline = true;
+  const hasVideo = stream.getVideoTracks().length > 0;
+  tile.classList.toggle("has-video", hasVideo);
+  updateParticipantCount();
+}
+
+function removeTile(id) {
+  const t = document.getElementById(`tile-${id}`);
+  if (t) t.remove();
+  updateParticipantCount();
+}
+
+function updateParticipantCount() {
+  const n = document.querySelectorAll(".video-tile").length;
+  document.getElementById("participant-count").textContent =
+    `${n} participant${n !== 1 ? "s" : ""}`;
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  CONTROLS
+// ═══════════════════════════════════════════════════════════════
+function toggleCamera() {
+  const track = localStream && localStream.getVideoTracks()[0];
+  if (!track) return;
+  state.camEnabled = !state.camEnabled;
+  track.enabled = state.camEnabled;
+  const btn = document.getElementById("btn-cam");
+  btn.textContent = state.camEnabled ? "Cam Off" : "Cam On";
+  btn.className = state.camEnabled ? "" : "secondary";
+  // Update local tile visibility
+  const tile = document.getElementById("tile-local");
+  if (tile) tile.classList.toggle("has-video", state.camEnabled);
+}
+
+function toggleMic() {
+  const track = localStream && localStream.getAudioTracks()[0];
+  if (!track) return;
+  state.micEnabled = !state.micEnabled;
+  track.enabled = state.micEnabled;
+  const btn = document.getElementById("btn-mic");
+  btn.textContent = state.micEnabled ? "Mute" : "Unmute";
+  btn.className = state.micEnabled ? "" : "muted";
+}
+
+function toggleHand() {
+  state.handRaised = !state.handRaised;
+  const btn = document.getElementById("btn-hand");
+  btn.textContent = state.handRaised ? "Lower Hand" : "Raise Hand";
+  btn.className = state.handRaised ? "muted" : "secondary";
+  sendWS({ type: "hand_raise", raised: state.handRaised });
+}
+
+async function leaveMeeting() {
+  // Close all peer connections
+  Object.keys(connections).forEach(id => { connections[id].close(); delete connections[id]; });
+
+  // Stop local tracks
+  if (localStream) { localStream.getTracks().forEach(t => t.stop()); localStream = null; }
+
+  // Close presence WS
+  if (state.presenceWs) { state.presenceWs.close(); state.presenceWs = null; }
+
+  // Notify backend
+  try { await apiFetch(`/meetings/${state.meetingId}/leave/`, { method:"POST" }); } catch(_) {}
+
+  // Reset UI
+  document.getElementById("video-grid").innerHTML = "";
+  document.getElementById("chat-messages").innerHTML = "";
+  state.meetingId = null;
+  state.camEnabled = true;
+  state.micEnabled = true;
+  state.handRaised = false;
+  showScreen("lobby-screen");
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  CHAT
+// ═══════════════════════════════════════════════════════════════
+function sendChat() {
+  const input = document.getElementById("chat-input");
+  const msg = input.value.trim();
+  if (!msg) return;
+  sendWS({ type: "chat", message: msg });
+  input.value = "";
+}
+
+function addChatMessage(sender, text) {
+  const d = document.createElement("div");
+  d.className = "chat-msg";
+  d.innerHTML = `<span class="sender">${escHtml(sender)}:</span> ${escHtml(text)}`;
+  appendChat(d);
+}
+
+function addChatSystem(text) {
+  const d = document.createElement("div");
+  d.className = "chat-msg system";
+  d.textContent = text;
+  appendChat(d);
+}
+
+function appendChat(el) {
+  const box = document.getElementById("chat-messages");
+  box.appendChild(el);
+  box.scrollTop = box.scrollHeight;
+}
+</script>
+</body>
+</html>
