@@ -1,0 +1,18 @@
+# Core
+django>=4.2,<5.0
+djangorestframework>=3.14
+djangorestframework-simplejwt>=5.3
+django-cors-headers>=4.3
+python-decouple>=3.8
+
+# ASGI + Channels
+daphne>=4.0
+channels>=4.0
+channels-redis>=4.1
+
+# Database
+psycopg2-binary>=2.9
+
+# SFU token generation (LiveKit)
+# Swap this service class in meetings/services.py to change providers
+livekit-api>=0.5

@@ -1,0 +1,35 @@
+version: "3.9"
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_DB: meetingdb
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+
+  # LiveKit SFU — local dev only.
+  # For production use LiveKit Cloud: https://livekit.io/cloud
+  livekit:
+    image: livekit/livekit-server:latest
+    command: --dev --bind 0.0.0.0
+    ports:
+      - "7880:7880"   # WebSocket / HTTP
+      - "7881:7881"   # TURN/TCP
+      - "7882:7882/udp"  # TURN/UDP
+    environment:
+      # --dev mode uses these defaults; matches .env.example
+      LIVEKIT_API_KEY: devkey
+      LIVEKIT_API_SECRET: secret
+
+volumes:
+  pgdata:
