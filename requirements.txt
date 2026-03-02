@@ -12,6 +12,7 @@ channels-redis>=4.1
 
 # Database
 psycopg2-binary>=2.9
+dj-database-url>=2.1
 
 # SFU token generation (LiveKit)
 # Swap this service class in meetings/services.py to change providers

@@ -1,5 +1,8 @@
 from pathlib import Path
 from datetime import timedelta
+import os
+
+import dj_database_url
 from decouple import config, Csv
 
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -56,26 +59,24 @@ TEMPLATES = [
 ASGI_APPLICATION = "meetingapp.asgi.application"
 WSGI_APPLICATION = "meetingapp.wsgi.application"
 
-# PostgreSQL
+# PostgreSQL — use DATABASE_URL on Railway, fall back to local dev settings
 DATABASES = {
-    "default": {
-        "ENGINE": "django.db.backends.postgresql",
-        "NAME": config("DB_NAME", default="meetingdb"),
-        "USER": config("DB_USER", default="postgres"),
-        "PASSWORD": config("DB_PASSWORD", default="postgres"),
-        "HOST": config("DB_HOST", default="localhost"),
-        "PORT": config("DB_PORT", default="5432"),
-    }
+    "default": dj_database_url.config(
+        default=os.environ.get(
+            "DATABASE_URL",
+            "postgresql://postgres:postgres@localhost:5432/meetingdb",
+        )
+    )
 }
 
 # Redis — Django Channels layer
+# Railway provides REDIS_URL; fall back to localhost for local dev
+REDIS_URL = os.environ.get("REDIS_URL", "redis://localhost:6379")
 CHANNEL_LAYERS = {
     "default": {
         "BACKEND": "channels_redis.core.RedisChannelLayer",
         "CONFIG": {
-            "hosts": [
-                (config("REDIS_HOST", default="localhost"), config("REDIS_PORT", default=6379, cast=int))
-            ],
+            "hosts": [REDIS_URL],
             "capacity": 1500,
             "expiry": 10,
         },
